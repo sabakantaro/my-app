@@ -3,16 +3,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-// class Square extends React.PureComponent {
-//   render() {
-//     return (
-//       <button className="square" onClick={() => this.props.onClick()}>
-//         {this.props.value}
-//       </button>
-//     );
-//   }
-// }
-// クラスから関数コンポーネントへ書き換え
 function Square(props) {
   return (
     <button className="square" onClick={props.onClick}>
@@ -21,47 +11,19 @@ function Square(props) {
   );
 }
 
-class Board extends React.PureComponent {
-  constructor() {
-    super();
-    this.state = {
-      squares: Array(9).fill(null),
-      whoIsNext: true,
-    };
-  }
-  handleClick(i) {
-    const squares = this.state.squares.slice(); //sliceでsquaresの配列を分割して渡す
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.whoIsNext ? 'H' : '愛';
-    this.setState({
-      squares: squares,
-      whoIsNext: !this.state.whoIsNext,
-    });
-  }
+class Board extends React.Component {
   renderSquare(i) {
     return (
       <Square
-        value={this.state.squares[i]}
-        onClick={() => this.handleClick(i)}
+        value={this.props.squares[i]}
+        onClick={() => this.props.onClick(i)}
       />
     );
   }
 
   render() {
-    const winner = calculateWinner(this.state.squares);
-    let status;
-    if (winner) {
-      status = '強き煩悩：' + winner;
-    } else {
-      status = 'あなたの脳内：' + (this.state.whoIsNext ? 'H' : '愛');
-    }
-
     return (
       <div>
-        <div className="bonnou">最強の煩悩決定戦</div>
-        <div className="status">{status}</div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -82,16 +44,75 @@ class Board extends React.PureComponent {
   }
 }
 
-class Game extends React.PureComponent {
+class Game extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      history: [
+        {
+          squares: Array(9).fill(null),
+        },
+      ],
+      stepNumber: 0,
+      whoIsNext: true,
+    };
+  }
+  handleClick(i) {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    squares[i] = this.state.whoIsNext ? 'H' : '愛';
+    this.setState({
+      history: history.concat([
+        {
+          squares: squares,
+        },
+      ]),
+      stepNumber: history.length,
+      whoIsNext: !this.state.whoIsNext,
+    });
+  }
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      whoIsNext: step % 2 === 0,
+    });
+  }
   render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);
+
+    const moves = history.map((_step, move) => {
+      const desc = move ? '戻る#' + move : '初めから';
+      return (
+        <li key={move}>
+          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        </li>
+      );
+    });
+
+    let status;
+    if (winner) {
+      status = '勝利した煩悩：' + winner;
+    } else {
+      status = 'あなたの脳内：' + (this.state.whoIsNext ? 'H' : '愛');
+    }
+
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+          <Board
+            squares={current.squares}
+            onClick={(i) => this.handleClick(i)}
+          />
         </div>
         <div className="game-info">
-          <div>{/* status */}</div>
-          <ol>{/* TODO */}</ol>
+          <div>{status}</div>
+          <ol>{moves}</ol>
         </div>
       </div>
     );
